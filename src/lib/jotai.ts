@@ -119,7 +119,7 @@ const drawGridEffect = atomEffect((get) => {
 
 const gameOfLifeAtom = atom((get): GameOfLife | undefined => {
 	get(canvasDimensionAtom)
-	const canvas = document.querySelector("#grid") as
+	const canvas = document.querySelector("#game-of-life") as
 		| HTMLCanvasElement
 		| undefined
 	if (!canvas) {
