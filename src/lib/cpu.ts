@@ -8,7 +8,7 @@ export class Cpu implements GameOfLife {
 	canvas: HTMLCanvasElement
 	ctx: CanvasRenderingContext2D
 	currentGridId: "one" | "two" = "one"
-	gameSize: Dimension
+	gameDimension: Dimension
 
 	constructor(canvas: HTMLCanvasElement, gameSize: Dimension) {
 		const ctx = canvas.getContext("2d")
@@ -17,23 +17,37 @@ export class Cpu implements GameOfLife {
 		}
 		this.canvas = canvas
 		this.ctx = ctx
-		this.gameSize = gameSize
-		this.grid1 = new Uint8Array(this.gameSize.width * this.gameSize.height)
-		this.grid2 = new Uint8Array(this.gameSize.width * this.gameSize.height)
+		this.gameDimension = gameSize
+		this.grid1 = new Uint8Array(
+			this.gameDimension.width * this.gameDimension.height,
+		)
+		this.grid2 = new Uint8Array(
+			this.gameDimension.width * this.gameDimension.height,
+		)
 	}
 
-	draw(zoomWidth: number, zoomPosition: Position): void {
+	draw(start: Position, dimension: Dimension): void {
 		if (!this.ctx) {
 			throw new Error("No context")
 		}
+		const cellSize = this.canvas.width / dimension.width
 		const currentGrid = this.currentGrid
+
 		this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
-		this.ctx.beginPath()
-		this.ctx.fillStyle = "#000F"
+		for (let j = 0; j < dimension.height; j++) {
+			for (let i = 0; i < dimension.width; i++) {
+				const index = (start.y + j) * this.gameDimension.width + start.x + i
+				const state = currentGrid[index]
+				if (state) {
+					this.ctx.fillStyle = "#000"
+					this.ctx.fillRect(i * cellSize, j * cellSize, cellSize, cellSize)
+				}
+			}
+		}
 	}
 
 	setGame(grid: Uint8Array<ArrayBuffer>): void {
-		if (grid.length !== this.gameSize.width * this.gameSize.height) {
+		if (grid.length !== this.gameDimension.width * this.gameDimension.height) {
 			throw new Error("Invalid grid size")
 		}
 		switch (this.currentGridId) {
@@ -49,9 +63,9 @@ export class Cpu implements GameOfLife {
 	}
 
 	step(): void {
-		for (let i = 0; i < this.gameSize.width; i++) {
-			for (let j = 0; j < this.gameSize.height; j++) {
-				const index = this.gameSize.width * j + i
+		for (let i = 0; i < this.gameDimension.width; i++) {
+			for (let j = 0; j < this.gameDimension.height; j++) {
+				const index = this.gameDimension.width * j + i
 				const nbNeighboors = this.getNbNeighboors(this.currentGrid, index)
 				const cell = this.currentGrid[index]
 				let newCell = cell
@@ -81,8 +95,8 @@ export class Cpu implements GameOfLife {
 	}
 
 	getNbNeighboors(grid: Uint8Array<ArrayBuffer>, index: number): number {
-		const width = this.gameSize.width
-		const height = this.gameSize.height
+		const width = this.gameDimension.width
+		const height = this.gameDimension.height
 		const x = index % width
 		const y = Math.floor(index / width)
 		let count = 0

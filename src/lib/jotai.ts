@@ -7,47 +7,37 @@ import type { GameOfLife } from "@/lib/logic"
 export type Dimension = { width: number; height: number }
 export type Position = { x: number; y: number }
 
-const widthToHeight = (width: number, ratio: number) => {
-	return Math.floor(width * ratio)
-}
-
-const heightToWidth = (height: number, ratio: number) => {
-	return Math.floor(height / ratio)
-}
+const clamp = (value: number, min: number, max: number) =>
+	Math.min(Math.max(value, min), max)
 
 const gameDimensionAtom = atom<Dimension>({ width: 600, height: 400 })
-const ratioAtom = atom((get) => {
-	const gameDimension = get(gameDimensionAtom)
-	return gameDimension.height / gameDimension.width
-})
 
 const generationTimeAtom = atom(200)
 
 const playAtom = atom(false)
 
-const zoomWidthAtom = atom<number>(600)
-const zoomHeightAtom = atom((get) => {
-	const ratio = get(ratioAtom)
-	const zoomWidth = get(zoomWidthAtom)
-	return widthToHeight(zoomWidth, ratio)
+const minimapWidthAtom = atom<number>(600)
+
+const minimapHeightAtom = atom((get) => {
+	const minimapWidth = get(minimapWidthAtom)
+	const canvasDimension = get(canvasDimensionAtom)
+	return Math.floor(
+		(minimapWidth * canvasDimension.height) / canvasDimension.width,
+	)
 })
 
-const setZoomHeightAtom = atom(null, (get, set, newZoomHeight: number) => {
-	const ratio = get(ratioAtom)
-	const newZoomWidth = heightToWidth(newZoomHeight, ratio)
-	set(zoomWidthAtom, newZoomWidth)
-})
+const minimapPositionAtom = atom<Position>({ x: 0, y: 0 })
 
-const zoomPositionAtom = atom<Position>({ x: 0, y: 0 })
-
-const maxZoomWidthAtom = atom((get) => {
+const maxMinimapWidthAtom = atom((get) => {
 	const gameDimension = get(gameDimensionAtom)
-	const ratio = get(ratioAtom)
-	if (gameDimension.width < gameDimension.height) {
-		return gameDimension.width
-	} else {
-		return heightToWidth(gameDimension.height, ratio)
-	}
+	const canvasDimension = get(canvasDimensionAtom)
+
+	const maxWidthWhenWidthLimited = gameDimension.width
+	const maxWidthWhenHeightLimited = Math.floor(
+		(gameDimension.height * canvasDimension.width) / canvasDimension.height,
+	)
+
+	return Math.min(maxWidthWhenWidthLimited, maxWidthWhenHeightLimited)
 })
 
 const canvasDimensionAtom = withAtomEffect(
@@ -74,8 +64,9 @@ const canvasDimensionAtom = withAtomEffect(
 			gameOfLifeCanvas.height = screenHeight
 
 			set(canvasDimensionAtom, { width: screenWidth, height: screenHeight })
-			const maxZoomWidth = get.peek(maxZoomWidthAtom)
-			set(zoomWidthAtom, maxZoomWidth)
+			const maxMinimapWidth = get.peek(maxMinimapWidthAtom)
+			set(minimapWidthAtom, maxMinimapWidth)
+			set(drawAtom)
 		}
 		handler()
 		window.addEventListener("resize", handler)
@@ -90,33 +81,40 @@ const nbCellsAtom = atom((get) => {
 	return gameDimension.width * gameDimension.height
 })
 
+const cellSizeAtom = atom((get) => {
+	const minimapWidth = get(minimapWidthAtom)
+	const canvasDimension = get(canvasDimensionAtom)
+	return canvasDimension.width / minimapWidth
+})
+
 const drawGridEffect = atomEffect((get) => {
-	// const canvas = document.querySelector("#grid") as
-	// 	| HTMLCanvasElement
-	// 	| undefined
-	// if (!canvas) {
-	// 	throw new Error("No canvas")
-	// }
-	// const cellSize = get(cellSizeAtom)
-	// const cellsDimension = get(cellsDimensionAtom)
-	// const canvasDimension = get(canvasDimensionAtom)
-	// const ctx = canvas.getContext("2d")
-	// if (!ctx) {
-	// 	throw new Error("No context")
-	// }
-	// ctx.clearRect(0, 0, canvasDimension.width, canvasDimension.height)
-	// ctx.beginPath()
-	// for (let i = 0; i < cellsDimension.width; i++) {
-	// 	ctx.moveTo(i * cellSize, 0)
-	// 	ctx.lineTo(i * cellSize, canvasDimension.height)
-	// }
-	// for (let i = 0; i < cellsDimension.height; i++) {
-	// 	ctx.moveTo(0, i * cellSize)
-	// 	ctx.lineTo(canvasDimension.width, i * cellSize)
-	// }
-	// ctx.lineWidth = 1
-	// ctx.strokeStyle = "#0002"
-	// ctx.stroke()
+	const canvas = document.querySelector("#grid") as
+		| HTMLCanvasElement
+		| undefined
+	if (!canvas) {
+		throw new Error("No canvas")
+	}
+	const minimapWidth = get(minimapWidthAtom)
+	const minimapHeight = get(minimapHeightAtom)
+	const cellSize = get(cellSizeAtom)
+	const canvasDimension = get(canvasDimensionAtom)
+	const ctx = canvas.getContext("2d")
+	if (!ctx) {
+		throw new Error("No context")
+	}
+	ctx.clearRect(0, 0, canvasDimension.width, canvasDimension.height)
+	ctx.beginPath()
+	for (let i = 0; i < minimapWidth; i++) {
+		ctx.moveTo(i * cellSize, 0)
+		ctx.lineTo(i * cellSize, canvasDimension.height)
+	}
+	for (let i = 0; i < minimapHeight; i++) {
+		ctx.moveTo(0, i * cellSize)
+		ctx.lineTo(canvasDimension.width, i * cellSize)
+	}
+	ctx.lineWidth = 1
+	ctx.strokeStyle = "#0002"
+	ctx.stroke()
 })
 
 const gameOfLifeAtom = atom((get): GameOfLife | undefined => {
@@ -128,10 +126,14 @@ const gameOfLifeAtom = atom((get): GameOfLife | undefined => {
 		return
 	}
 	const gameDimension = get(gameDimensionAtom)
-	const zoomPosition = get(zoomPositionAtom)
-	const zoomWidth = get(zoomWidthAtom)
+	const minimapPosition = get(minimapPositionAtom)
+	const minimapWidth = get(minimapWidthAtom)
+	const minimapHeight = get(minimapHeightAtom)
 	const gameOfLife = new Cpu(canvas, gameDimension)
-	gameOfLife.draw(zoomWidth, zoomPosition)
+	gameOfLife.draw(minimapPosition, {
+		width: minimapWidth,
+		height: minimapHeight,
+	})
 	return gameOfLife
 })
 
@@ -146,7 +148,7 @@ const getRandomGridAtom = atom(null, (get, _, aliveRatio: number = 0.5) => {
 	return grid
 })
 
-const playEffect = atomEffect((get) => {
+const playEffect = atomEffect((get, set) => {
 	const generationTime = get(generationTimeAtom)
 	const gameOfLife = get(gameOfLifeAtom)
 	const play = get(playAtom)
@@ -155,6 +157,7 @@ const playEffect = atomEffect((get) => {
 	}
 	const playInterval = window.setInterval(() => {
 		gameOfLife.step()
+		set(drawAtom)
 	}, generationTime)
 	return () => {
 		window.clearInterval(playInterval)
@@ -191,10 +194,10 @@ const minimapEffect = atomEffect((get) => {
 	const widthRatio = minimapCanvas.width / gameDimension.width
 	const heightRatio = minimapCanvas.height / gameDimension.height
 
-	const zoomWidth = get(zoomWidthAtom)
-	const zoomHeigt = get(zoomHeightAtom)
+	const minimapWidth = get(minimapWidthAtom)
+	const minimapHeigt = get(minimapHeightAtom)
 
-	const zoomPosition = get(zoomPositionAtom)
+	const minimapPosition = get(minimapPositionAtom)
 
 	ctx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height)
 
@@ -203,10 +206,10 @@ const minimapEffect = atomEffect((get) => {
 
 	ctx.fillStyle = "#F808"
 	ctx.fillRect(
-		zoomPosition.x * widthRatio,
-		zoomPosition.y * heightRatio,
-		zoomWidth * widthRatio,
-		zoomHeigt * heightRatio,
+		minimapPosition.x * widthRatio,
+		minimapPosition.y * heightRatio,
+		minimapWidth * widthRatio,
+		minimapHeigt * heightRatio,
 	)
 })
 
@@ -215,10 +218,10 @@ let last: Position | undefined
 let positionWhenStart: Position | undefined
 
 const onMouseDownAtom = atom(null, (get, _, e: React.MouseEvent) => {
-	const zoomPosition = get(zoomPositionAtom)
+	const minimapPosition = get(minimapPositionAtom)
 	isPanning = true
 	last = { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY }
-	positionWhenStart = structuredClone(zoomPosition)
+	positionWhenStart = structuredClone(minimapPosition)
 })
 
 const onMouseUpAtom = atom(null, () => {
@@ -232,9 +235,10 @@ const onMouseMoveAtom = atom(null, (get, set, e: React.MouseEvent) => {
 		return
 	}
 
-	const zoomPosition = get(zoomPositionAtom)
-	const zoomWidth = get(zoomWidthAtom)
-	const zoomHeight = get(zoomHeightAtom)
+	const canvasDimension = get(canvasDimensionAtom)
+	const minimapPosition = get(minimapPositionAtom)
+	const minimapWidth = get(minimapWidthAtom)
+	const minimapHeight = get(minimapHeightAtom)
 	const gameDimension = get(gameDimensionAtom)
 
 	const current: Position = {
@@ -247,63 +251,92 @@ const onMouseMoveAtom = atom(null, (get, set, e: React.MouseEvent) => {
 		y: current.y - last.y,
 	}
 
-	last = current
+	const deltaMinimap: Position = {
+		x: delta.x * (minimapWidth / canvasDimension.width),
+		y: delta.y * (minimapHeight / canvasDimension.height),
+	}
 
 	const newPosition: Position = {
-		x: Math.min(
-			Math.max(zoomPosition.x - delta.x, 0),
-			gameDimension.width - zoomWidth,
+		x: Math.floor(
+			clamp(
+				minimapPosition.x - deltaMinimap.x,
+				0,
+				gameDimension.width - minimapWidth,
+			),
 		),
-		y: Math.min(
-			Math.max(zoomPosition.y - delta.y, 0),
-			gameDimension.height - zoomHeight,
+		y: Math.floor(
+			clamp(
+				minimapPosition.y - deltaMinimap.y,
+				0,
+				gameDimension.height - minimapHeight,
+			),
 		),
 	}
 
-	set(zoomPositionAtom, newPosition)
+	set(minimapPositionAtom, newPosition)
+	last = current
 })
 
 const ZOOM_SENSITIVITY = 0.0015
 
 const onWheelAtom = atom(null, (get, set, e: React.WheelEvent) => {
-	const zoomWidth = get(zoomWidthAtom)
-	const zoomHeight = get(zoomHeightAtom)
-	const zoomPosition = get(zoomPositionAtom)
+	const minimapWidth = get(minimapWidthAtom)
+	const minimapHeight = get(minimapHeightAtom)
+	const minimapPosition = get(minimapPositionAtom)
 	const gameDimension = get(gameDimensionAtom)
-	const maxZoomWidth = get(maxZoomWidthAtom)
-	const ratio = get(ratioAtom)
+	const canvasDimension = get(canvasDimensionAtom)
+	const maxMinimapWidth = get(maxMinimapWidthAtom)
 
 	const deltaPx = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY
-	const zoomFactor = Math.exp(deltaPx * ZOOM_SENSITIVITY)
+	const minimapFactor = Math.exp(deltaPx * ZOOM_SENSITIVITY)
 
-	const newZoomWidth = Math.floor(
-		Math.min(Math.max(zoomWidth * zoomFactor, 1), maxZoomWidth),
+	const newMinimapWidth = Math.floor(
+		clamp(minimapWidth * minimapFactor, 1, maxMinimapWidth),
 	)
 
-	if (newZoomWidth < 10) {
+	if (newMinimapWidth < 10) {
 		return
 	}
 
-	const newZoomHeight = Math.floor(
-		Math.min(widthToHeight(newZoomWidth, ratio), gameDimension.height),
+	const newMinimapHeight = Math.floor(
+		Math.min(
+			Math.floor(
+				(newMinimapWidth * canvasDimension.height) / canvasDimension.width,
+			),
+			gameDimension.height,
+		),
 	)
-	if (newZoomHeight <= 0) {
+	if (newMinimapHeight <= 0) {
 		return
 	}
 
 	const newPosition: Position = {
 		x: Math.min(
-			Math.max(zoomPosition.x + (zoomWidth - newZoomWidth) / 2, 0),
-			gameDimension.width - newZoomWidth,
+			Math.max(minimapPosition.x + (minimapWidth - newMinimapWidth) / 2, 0),
+			gameDimension.width - newMinimapWidth,
 		),
 		y: Math.min(
-			Math.max(zoomPosition.y + (zoomHeight - newZoomHeight) / 2, 0),
-			gameDimension.height - newZoomHeight,
+			Math.max(minimapPosition.y + (minimapHeight - newMinimapHeight) / 2, 0),
+			gameDimension.height - newMinimapHeight,
 		),
 	}
 
-	set(zoomWidthAtom, newZoomWidth)
-	set(zoomPositionAtom, newPosition)
+	set(minimapWidthAtom, newMinimapWidth)
+	set(minimapPositionAtom, newPosition)
+})
+
+const drawAtom = atom(null, (get) => {
+	const gameOfLife = get(gameOfLifeAtom)
+	if (!gameOfLife) {
+		throw new Error("No game of life")
+	}
+	const minimapPosition = get(minimapPositionAtom)
+	const minimapWidth = get(minimapWidthAtom)
+	const minimapHeight = get(minimapHeightAtom)
+	gameOfLife.draw(minimapPosition, {
+		width: minimapWidth,
+		height: minimapHeight,
+	})
 })
 
 export const atoms = {
@@ -320,9 +353,11 @@ export const atoms = {
 	onMouseUpAtom,
 	onMouseMoveAtom,
 	gameDimensionAtom,
-	zoomWidthAtom,
-	zoomHeightAtom,
+	minimapWidthAtom,
+	minimapHeightAtom,
+	minimapPositionAtom,
 	onWheelAtom,
+	drawAtom,
 }
 
 export const jotaiStore = createStore()

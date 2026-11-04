@@ -5,8 +5,9 @@ import { atoms } from "@/lib/jotai"
 export const GridInfo = () => {
 	const canvasDimension = useAtomValue(atoms.canvasDimensionAtom)
 	const gameDimension = useAtomValue(atoms.gameDimensionAtom)
-	const zoomWidth = useAtomValue(atoms.zoomWidthAtom)
-	const zoomHeight = useAtomValue(atoms.zoomHeightAtom)
+	const minimapWidth = useAtomValue(atoms.minimapWidthAtom)
+	const minimapHeight = useAtomValue(atoms.minimapHeightAtom)
+	const minimapPosition = useAtomValue(atoms.minimapPositionAtom)
 	const nbCells = useAtomValue(atoms.nbCellsAtom)
 	return (
 		<Card>
@@ -26,9 +27,15 @@ export const GridInfo = () => {
 							</span>
 						</div>
 						<div className="flex items-center gap-2">
-							<span>Zoom Dimension: </span>
+							<span>Minimap Dimension: </span>
 							<span>
-								{zoomWidth} x {zoomHeight}
+								{minimapWidth} x {minimapHeight}
+							</span>
+						</div>
+						<div className="flex items-center gap-2">
+							<span>Minimap Position: </span>
+							<span>
+								{minimapPosition.x} x {minimapPosition.y}
 							</span>
 						</div>
 						<div className="flex items-center gap-2">

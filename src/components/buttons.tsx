@@ -6,7 +6,11 @@ import { atoms } from "@/lib/jotai"
 export const Buttons = () => {
 	const gameOfLife = useAtomValue(atoms.gameOfLifeAtom)
 	const getRandomGrid = useSetAtom(atoms.getRandomGridAtom)
+	const draw = useSetAtom(atoms.drawAtom)
 	const [play, setPlay] = useAtom(atoms.playAtom)
+	if (!gameOfLife) {
+		return null
+	}
 	return (
 		<div className="flex items-center gap-1">
 			<Button
@@ -30,7 +34,8 @@ export const Buttons = () => {
 			<Button
 				size="icon"
 				onClick={() => {
-					gameOfLife?.step()
+					gameOfLife.step()
+					draw()
 				}}
 			>
 				<Redo />
@@ -42,7 +47,8 @@ export const Buttons = () => {
 				size="icon"
 				onClick={() => {
 					const grid = getRandomGrid(0.1)
-					gameOfLife?.setGame(grid)
+					gameOfLife.setGame(grid)
+					draw()
 				}}
 			>
 				<Dices />
