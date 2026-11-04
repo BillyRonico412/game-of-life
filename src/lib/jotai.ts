@@ -10,7 +10,7 @@ export type Position = { x: number; y: number }
 const clamp = (value: number, min: number, max: number) =>
 	Math.min(Math.max(value, min), max)
 
-const gameDimensionAtom = atom<Dimension>({ width: 600, height: 400 })
+const gameDimensionAtom = atom<Dimension>({ width: 800, height: 600 })
 
 const generationTimeAtom = atom(200)
 
@@ -27,6 +27,13 @@ const minimapHeightAtom = atom((get) => {
 })
 
 const minimapPositionAtom = atom<Position>({ x: 0, y: 0 })
+const minimapPositionFloorAtom = atom((get) => {
+	const minimapPosition = get(minimapPositionAtom)
+	return {
+		x: Math.floor(minimapPosition.x),
+		y: Math.floor(minimapPosition.y),
+	}
+})
 
 const maxMinimapWidthAtom = atom((get) => {
 	const gameDimension = get(gameDimensionAtom)
@@ -126,14 +133,7 @@ const gameOfLifeAtom = atom((get): GameOfLife | undefined => {
 		return
 	}
 	const gameDimension = get(gameDimensionAtom)
-	const minimapPosition = get(minimapPositionAtom)
-	const minimapWidth = get(minimapWidthAtom)
-	const minimapHeight = get(minimapHeightAtom)
 	const gameOfLife = new Cpu(canvas, gameDimension)
-	gameOfLife.draw(minimapPosition, {
-		width: minimapWidth,
-		height: minimapHeight,
-	})
 	return gameOfLife
 })
 
@@ -166,7 +166,7 @@ const playEffect = atomEffect((get, set) => {
 
 const MAX_MINIMAX_SIZE = 300
 
-const minimapEffect = atomEffect((get) => {
+const minimapEffect = atomEffect((get, set) => {
 	const minimapCanvas = document.querySelector("#minimap") as
 		| HTMLCanvasElement
 		| undefined
@@ -196,42 +196,37 @@ const minimapEffect = atomEffect((get) => {
 
 	const minimapWidth = get(minimapWidthAtom)
 	const minimapHeigt = get(minimapHeightAtom)
-
-	const minimapPosition = get(minimapPositionAtom)
+	const minimapPositionFloor = get(minimapPositionFloorAtom)
 
 	ctx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height)
-
 	ctx.fillStyle = "#8888"
 	ctx.fillRect(0, 0, minimapCanvas.width, minimapCanvas.height)
 
 	ctx.fillStyle = "#F808"
 	ctx.fillRect(
-		minimapPosition.x * widthRatio,
-		minimapPosition.y * heightRatio,
+		minimapPositionFloor.x * widthRatio,
+		minimapPositionFloor.y * heightRatio,
 		minimapWidth * widthRatio,
 		minimapHeigt * heightRatio,
 	)
+	set(drawAtom)
 })
 
 let isPanning = false
 let last: Position | undefined
-let positionWhenStart: Position | undefined
 
-const onMouseDownAtom = atom(null, (get, _, e: React.MouseEvent) => {
-	const minimapPosition = get(minimapPositionAtom)
+const onMouseDownAtom = atom(null, (_get, _set, e: React.MouseEvent) => {
 	isPanning = true
 	last = { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY }
-	positionWhenStart = structuredClone(minimapPosition)
 })
 
 const onMouseUpAtom = atom(null, () => {
 	isPanning = false
 	last = undefined
-	positionWhenStart = undefined
 })
 
 const onMouseMoveAtom = atom(null, (get, set, e: React.MouseEvent) => {
-	if (!isPanning || !last || !positionWhenStart) {
+	if (!isPanning || !last) {
 		return
 	}
 
@@ -257,24 +252,20 @@ const onMouseMoveAtom = atom(null, (get, set, e: React.MouseEvent) => {
 	}
 
 	const newPosition: Position = {
-		x: Math.floor(
-			clamp(
-				minimapPosition.x - deltaMinimap.x,
-				0,
-				gameDimension.width - minimapWidth,
-			),
+		x: clamp(
+			minimapPosition.x - deltaMinimap.x,
+			0,
+			gameDimension.width - minimapWidth,
 		),
-		y: Math.floor(
-			clamp(
-				minimapPosition.y - deltaMinimap.y,
-				0,
-				gameDimension.height - minimapHeight,
-			),
+		y: clamp(
+			minimapPosition.y - deltaMinimap.y,
+			0,
+			gameDimension.height - minimapHeight,
 		),
 	}
 
 	set(minimapPositionAtom, newPosition)
-	last = current
+	last = structuredClone(current)
 })
 
 const ZOOM_SENSITIVITY = 0.0015
@@ -310,13 +301,19 @@ const onWheelAtom = atom(null, (get, set, e: React.WheelEvent) => {
 		return
 	}
 
+	const ratioX = e.nativeEvent.offsetX / canvasDimension.width
+	const ratioY = e.nativeEvent.offsetY / canvasDimension.height
+
 	const newPosition: Position = {
-		x: Math.min(
-			Math.max(minimapPosition.x + (minimapWidth - newMinimapWidth) / 2, 0),
+		x: clamp(
+			minimapPosition.x + ratioX * (minimapWidth - newMinimapWidth),
+			0,
 			gameDimension.width - newMinimapWidth,
 		),
-		y: Math.min(
-			Math.max(minimapPosition.y + (minimapHeight - newMinimapHeight) / 2, 0),
+
+		y: clamp(
+			minimapPosition.y + ratioY * (minimapHeight - newMinimapHeight),
+			0,
 			gameDimension.height - newMinimapHeight,
 		),
 	}
@@ -330,10 +327,10 @@ const drawAtom = atom(null, (get) => {
 	if (!gameOfLife) {
 		throw new Error("No game of life")
 	}
-	const minimapPosition = get(minimapPositionAtom)
+	const minimapPositionFloor = get(minimapPositionFloorAtom)
 	const minimapWidth = get(minimapWidthAtom)
 	const minimapHeight = get(minimapHeightAtom)
-	gameOfLife.draw(minimapPosition, {
+	gameOfLife.draw(minimapPositionFloor, {
 		width: minimapWidth,
 		height: minimapHeight,
 	})
@@ -356,6 +353,7 @@ export const atoms = {
 	minimapWidthAtom,
 	minimapHeightAtom,
 	minimapPositionAtom,
+	minimapPositionFloorAtom,
 	onWheelAtom,
 	drawAtom,
 }

@@ -7,7 +7,7 @@ export const GridInfo = () => {
 	const gameDimension = useAtomValue(atoms.gameDimensionAtom)
 	const minimapWidth = useAtomValue(atoms.minimapWidthAtom)
 	const minimapHeight = useAtomValue(atoms.minimapHeightAtom)
-	const minimapPosition = useAtomValue(atoms.minimapPositionAtom)
+	const minimapPositionFloor = useAtomValue(atoms.minimapPositionFloorAtom)
 	const nbCells = useAtomValue(atoms.nbCellsAtom)
 	return (
 		<Card>
@@ -35,7 +35,7 @@ export const GridInfo = () => {
 						<div className="flex items-center gap-2">
 							<span>Minimap Position: </span>
 							<span>
-								{minimapPosition.x} x {minimapPosition.y}
+								{minimapPositionFloor.x} x {minimapPositionFloor.y}
 							</span>
 						</div>
 						<div className="flex items-center gap-2">
