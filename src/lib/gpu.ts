@@ -267,4 +267,11 @@ export class Gpu implements GameOfLife {
 		const commandBuffer = commandEncoder.finish()
 		this.device.queue.submit([commandBuffer])
 	}
+
+	clear() {
+		this.gridOneBuffer.destroy()
+		this.gridTwoBuffer.destroy()
+		this.renderUniformBuffer.destroy()
+		this.computeUniformBuffer.destroy()
+	}
 }

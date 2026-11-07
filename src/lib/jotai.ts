@@ -176,41 +176,56 @@ const deviceAsyncAtom = atom(async () => {
 	if (!adapter) {
 		throw new Error("No GPU adapter found")
 	}
-	const device = await adapter.requestDevice()
+	const device = await adapter.requestDevice({
+		requiredLimits: {
+			maxStorageBufferBindingSize: adapter.limits.maxStorageBufferBindingSize,
+			maxBufferSize: adapter.limits.maxBufferSize,
+		},
+	})
 	return device
 })
 
 const deviceAtom = unwrap(deviceAsyncAtom, (prev) => prev)
 
-const gameOfLifeAtom = atom((get): GameOfLife | undefined => {
-	get(canvasDimensionAtom)
-	const gameDimension = get(gameDimensionAtom)
-	const gameOfLifeType = get(gameOfLifeTypeAtom)
-	const device = get(deviceAtom)
-	if (!device) {
-		return
-	}
-	switch (gameOfLifeType) {
-		case "cpu": {
-			const canvas = document.querySelector("#game-of-life-cpu") as
-				| HTMLCanvasElement
-				| undefined
-			if (!canvas) {
-				throw new Error("No canvas")
-			}
-			return new Cpu(canvas, gameDimension)
+const gameOfLifeAtom = withAtomEffect(
+	atom<GameOfLife | undefined>(),
+	(get, set) => {
+		get(canvasDimensionAtom)
+		const gameDimension = get(gameDimensionAtom)
+		const gameOfLifeType = get(gameOfLifeTypeAtom)
+		const device = get(deviceAtom)
+		if (!device) {
+			return
 		}
-		case "gpu": {
-			const canvas = document.querySelector("#game-of-life-gpu") as
-				| HTMLCanvasElement
-				| undefined
-			if (!canvas) {
-				throw new Error("No canvas")
+		let gameOfLife: GameOfLife
+		switch (gameOfLifeType) {
+			case "cpu": {
+				const canvas = document.querySelector("#game-of-life-cpu") as
+					| HTMLCanvasElement
+					| undefined
+				if (!canvas) {
+					throw new Error("No canvas")
+				}
+				gameOfLife = new Cpu(canvas, gameDimension)
+				break
 			}
-			return new Gpu(canvas, gameDimension, device)
+			case "gpu": {
+				const canvas = document.querySelector("#game-of-life-gpu") as
+					| HTMLCanvasElement
+					| undefined
+				if (!canvas) {
+					throw new Error("No canvas")
+				}
+				gameOfLife = new Gpu(canvas, gameDimension, device)
+				break
+			}
 		}
-	}
-})
+		set(gameOfLifeAtom, gameOfLife)
+		return () => {
+			gameOfLife.clear()
+		}
+	},
+)
 
 const getClearGridAtom = atom(null, (get) => {
 	const gameDimension = get(gameDimensionAtom)

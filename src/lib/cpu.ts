@@ -113,4 +113,6 @@ export class Cpu implements GameOfLife {
 		}
 		return count
 	}
+
+	clear() {}
 }
