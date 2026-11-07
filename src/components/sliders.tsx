@@ -51,7 +51,7 @@ export const Sliders = () => {
 					</div>
 					<Slider
 						min={100}
-						max={10_000}
+						max={15_000}
 						step={100}
 						value={gameDimension.width}
 						onValueChange={(v) => {
@@ -68,7 +68,7 @@ export const Sliders = () => {
 					</div>
 					<Slider
 						min={100}
-						max={10_000}
+						max={15_000}
 						step={100}
 						value={gameDimension.height}
 						onValueChange={(v) => {
