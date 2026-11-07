@@ -1,7 +1,7 @@
 import type { Dimension, Position } from "@/lib/jotai"
 
 export interface GameOfLife {
-	setGame(grid: Uint8Array): void
-	step(): void
+	setGame(grid: Uint32Array): void
+	step(): number
 	draw(start: Position, dimension: Dimension): void
 }

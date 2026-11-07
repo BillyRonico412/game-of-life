@@ -3,25 +3,25 @@ import type { Dimension, Position } from "@/lib/jotai"
 import type { GameOfLife } from "@/lib/logic"
 
 export class Cpu implements GameOfLife {
-	grid1: Uint8Array<ArrayBuffer>
-	grid2: Uint8Array<ArrayBuffer>
+	grid1: Uint32Array<ArrayBuffer>
+	grid2: Uint32Array<ArrayBuffer>
 	canvas: HTMLCanvasElement
 	ctx: CanvasRenderingContext2D
 	currentGridId: "one" | "two" = "one"
 	gameDimension: Dimension
 
-	constructor(canvas: HTMLCanvasElement, gameSize: Dimension) {
+	constructor(canvas: HTMLCanvasElement, gameDimension: Dimension) {
 		const ctx = canvas.getContext("2d")
 		if (!ctx) {
 			throw new Error("No ctx 2d")
 		}
 		this.canvas = canvas
 		this.ctx = ctx
-		this.gameDimension = gameSize
-		this.grid1 = new Uint8Array(
+		this.gameDimension = gameDimension
+		this.grid1 = new Uint32Array(
 			this.gameDimension.width * this.gameDimension.height,
 		)
-		this.grid2 = new Uint8Array(
+		this.grid2 = new Uint32Array(
 			this.gameDimension.width * this.gameDimension.height,
 		)
 	}
@@ -46,7 +46,7 @@ export class Cpu implements GameOfLife {
 		}
 	}
 
-	setGame(grid: Uint8Array<ArrayBuffer>): void {
+	setGame(grid: Uint32Array<ArrayBuffer>): void {
 		if (grid.length !== this.gameDimension.width * this.gameDimension.height) {
 			throw new Error("Invalid grid size")
 		}
@@ -62,7 +62,7 @@ export class Cpu implements GameOfLife {
 		}
 	}
 
-	step(): void {
+	step(): number {
 		for (let i = 0; i < this.gameDimension.width; i++) {
 			for (let j = 0; j < this.gameDimension.height; j++) {
 				const index = this.gameDimension.width * j + i
@@ -78,23 +78,24 @@ export class Cpu implements GameOfLife {
 			}
 		}
 		this.currentGridId = this.currentGridId === "one" ? "two" : "one"
+		return Date.now()
 	}
 
-	get currentGrid(): Uint8Array<ArrayBuffer> {
+	get currentGrid(): Uint32Array<ArrayBuffer> {
 		return match(this.currentGridId)
 			.with("one", () => this.grid1)
 			.with("two", () => this.grid2)
 			.exhaustive()
 	}
 
-	get nextGrid(): Uint8Array<ArrayBuffer> {
+	get nextGrid(): Uint32Array<ArrayBuffer> {
 		return match(this.currentGridId)
 			.with("one", () => this.grid2)
 			.with("two", () => this.grid1)
 			.exhaustive()
 	}
 
-	getNbNeighboors(grid: Uint8Array<ArrayBuffer>, index: number): number {
+	getNbNeighboors(grid: Uint32Array<ArrayBuffer>, index: number): number {
 		const width = this.gameDimension.width
 		const height = this.gameDimension.height
 		const x = index % width

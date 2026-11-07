@@ -1,7 +1,9 @@
 import { atom, createStore } from "jotai"
+import { unwrap } from "jotai/utils"
 import { atomEffect, withAtomEffect } from "jotai-effect"
 import type React from "react"
 import { Cpu } from "@/lib/cpu"
+import { Gpu } from "@/lib/gpu"
 import type { GameOfLife } from "@/lib/logic"
 
 export type Dimension = { width: number; height: number }
@@ -17,6 +19,35 @@ const generationTimeAtom = atom(200)
 const playAtom = atom(false)
 
 const minimapWidthAtom = atom<number>(600)
+
+const generationDurationAtom = atom<number>(0)
+
+type GameOfLifeType = "cpu" | "gpu"
+
+const gameOfLifeTypeAtom = atom<GameOfLifeType>("gpu")
+
+const gameOfLifeTypeEffect = atomEffect((get) => {
+	const gameOfLifeType = get(gameOfLifeTypeAtom)
+	const canvasCpu = document.querySelector("#game-of-life-cpu") as
+		| HTMLCanvasElement
+		| undefined
+	const canvasGpu = document.querySelector("#game-of-life-gpu") as
+		| HTMLCanvasElement
+		| undefined
+	if (!canvasCpu || !canvasGpu) {
+		throw new Error("Some canvas is undefined")
+	}
+	switch (gameOfLifeType) {
+		case "cpu":
+			canvasCpu.style.display = "block"
+			canvasGpu.style.display = "none"
+			break
+		case "gpu":
+			canvasCpu.style.display = "none"
+			canvasGpu.style.display = "block"
+			break
+	}
+})
 
 const minimapHeightAtom = atom((get) => {
 	const minimapWidth = get(minimapWidthAtom)
@@ -44,7 +75,11 @@ const maxMinimapWidthAtom = atom((get) => {
 		(gameDimension.height * canvasDimension.width) / canvasDimension.height,
 	)
 
-	return Math.min(maxWidthWhenWidthLimited, maxWidthWhenHeightLimited)
+	return Math.min(
+		maxWidthWhenWidthLimited,
+		maxWidthWhenHeightLimited,
+		canvasDimension.width,
+	)
 })
 
 const canvasDimensionAtom = withAtomEffect(
@@ -54,22 +89,33 @@ const canvasDimensionAtom = withAtomEffect(
 			const gridCanvas = document.querySelector("#grid") as
 				| HTMLCanvasElement
 				| undefined
-			const gameOfLifeCanvas = document.querySelector("#game-of-life") as
+			const gameOfLifeCanvasCPU = document.querySelector("#game-of-life-cpu") as
+				| HTMLCanvasElement
+				| undefined
+			const gameOfLifeCanvasGPU = document.querySelector("#game-of-life-gpu") as
 				| HTMLCanvasElement
 				| undefined
 			const minimapCanvas = document.querySelector("#minimap") as
 				| HTMLCanvasElement
 				| undefined
-			if (!gridCanvas || !gameOfLifeCanvas || !minimapCanvas) {
+			if (
+				!gridCanvas ||
+				!gameOfLifeCanvasCPU ||
+				!minimapCanvas ||
+				!gameOfLifeCanvasGPU
+			) {
 				throw new Error("Some canvas is undefined")
 			}
 			const screenWidth = document.body.clientWidth
 			const screenHeight = document.body.clientHeight
 			gridCanvas.width = screenWidth
 			gridCanvas.height = screenHeight
-			gameOfLifeCanvas.width = screenWidth
-			gameOfLifeCanvas.height = screenHeight
+			gameOfLifeCanvasCPU.width = screenWidth
+			gameOfLifeCanvasCPU.height = screenHeight
+			gameOfLifeCanvasGPU.width = screenWidth
+			gameOfLifeCanvasGPU.height = screenHeight
 
+			set(playAtom, false)
 			set(canvasDimensionAtom, { width: screenWidth, height: screenHeight })
 			const maxMinimapWidth = get.peek(maxMinimapWidthAtom)
 			set(minimapWidthAtom, maxMinimapWidth)
@@ -95,6 +141,7 @@ const cellSizeAtom = atom((get) => {
 })
 
 const drawGridEffect = atomEffect((get) => {
+	get(gameDimensionAtom)
 	const canvas = document.querySelector("#grid") as
 		| HTMLCanvasElement
 		| undefined
@@ -124,22 +171,61 @@ const drawGridEffect = atomEffect((get) => {
 	ctx.stroke()
 })
 
+const deviceAsyncAtom = atom(async () => {
+	const adapter = await navigator.gpu.requestAdapter()
+	if (!adapter) {
+		throw new Error("No GPU adapter found")
+	}
+	const device = await adapter.requestDevice()
+	return device
+})
+
+const deviceAtom = unwrap(deviceAsyncAtom, (prev) => prev)
+
 const gameOfLifeAtom = atom((get): GameOfLife | undefined => {
 	get(canvasDimensionAtom)
-	const canvas = document.querySelector("#game-of-life") as
-		| HTMLCanvasElement
-		| undefined
-	if (!canvas) {
+	const gameDimension = get(gameDimensionAtom)
+	const gameOfLifeType = get(gameOfLifeTypeAtom)
+	const device = get(deviceAtom)
+	if (!device) {
 		return
 	}
+	switch (gameOfLifeType) {
+		case "cpu": {
+			const canvas = document.querySelector("#game-of-life-cpu") as
+				| HTMLCanvasElement
+				| undefined
+			if (!canvas) {
+				throw new Error("No canvas")
+			}
+			return new Cpu(canvas, gameDimension)
+		}
+		case "gpu": {
+			const canvas = document.querySelector("#game-of-life-gpu") as
+				| HTMLCanvasElement
+				| undefined
+			if (!canvas) {
+				throw new Error("No canvas")
+			}
+			return new Gpu(canvas, gameDimension, device)
+		}
+	}
+})
+
+const getClearGridAtom = atom(null, (get) => {
 	const gameDimension = get(gameDimensionAtom)
-	const gameOfLife = new Cpu(canvas, gameDimension)
-	return gameOfLife
+	const grid = new Uint32Array(gameDimension.width * gameDimension.height)
+	for (let j = 0; j < gameDimension.height; j++) {
+		for (let i = 0; i < gameDimension.width; i++) {
+			grid[j * gameDimension.width + i] = 0
+		}
+	}
+	return grid
 })
 
 const getRandomGridAtom = atom(null, (get, _, aliveRatio: number = 0.5) => {
 	const gameDimension = get(gameDimensionAtom)
-	const grid = new Uint8Array(gameDimension.width * gameDimension.height)
+	const grid = new Uint32Array(gameDimension.width * gameDimension.height)
 	for (let j = 0; j < gameDimension.height; j++) {
 		for (let i = 0; i < gameDimension.width; i++) {
 			grid[j * gameDimension.width + i] = Number(Math.random() < aliveRatio)
@@ -156,7 +242,9 @@ const playEffect = atomEffect((get, set) => {
 		return
 	}
 	const playInterval = window.setInterval(() => {
-		gameOfLife.step()
+		const start = Date.now()
+		const end = gameOfLife.step()
+		set(generationDurationAtom, end - start)
 		set(drawAtom)
 	}, generationTime)
 	return () => {
@@ -325,7 +413,8 @@ const onWheelAtom = atom(null, (get, set, e: React.WheelEvent) => {
 const drawAtom = atom(null, (get) => {
 	const gameOfLife = get(gameOfLifeAtom)
 	if (!gameOfLife) {
-		throw new Error("No game of life")
+		console.info("No game of life")
+		return
 	}
 	const minimapPositionFloor = get(minimapPositionFloorAtom)
 	const minimapWidth = get(minimapWidthAtom)
@@ -356,6 +445,10 @@ export const atoms = {
 	minimapPositionFloorAtom,
 	onWheelAtom,
 	drawAtom,
+	getClearGridAtom,
+	generationDurationAtom,
+	gameOfLifeTypeEffect,
+	gameOfLifeTypeAtom,
 }
 
 export const jotaiStore = createStore()

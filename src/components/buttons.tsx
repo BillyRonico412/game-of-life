@@ -6,6 +6,7 @@ import { atoms } from "@/lib/jotai"
 export const Buttons = () => {
 	const gameOfLife = useAtomValue(atoms.gameOfLifeAtom)
 	const getRandomGrid = useSetAtom(atoms.getRandomGridAtom)
+	const getClearGrid = useSetAtom(atoms.getClearGridAtom)
 	const draw = useSetAtom(atoms.drawAtom)
 	const [play, setPlay] = useAtom(atoms.playAtom)
 	if (!gameOfLife) {
@@ -40,7 +41,14 @@ export const Buttons = () => {
 			>
 				<Redo />
 			</Button>
-			<Button size="icon">
+			<Button
+				size="icon"
+				onClick={() => {
+					const grid = getClearGrid()
+					gameOfLife.setGame(grid)
+					draw()
+				}}
+			>
 				<RotateCcw />
 			</Button>
 			<Button

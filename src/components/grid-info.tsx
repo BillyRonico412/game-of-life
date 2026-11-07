@@ -8,6 +8,7 @@ export const GridInfo = () => {
 	const minimapWidth = useAtomValue(atoms.minimapWidthAtom)
 	const minimapHeight = useAtomValue(atoms.minimapHeightAtom)
 	const minimapPositionFloor = useAtomValue(atoms.minimapPositionFloorAtom)
+	const generationDuration = useAtomValue(atoms.generationDurationAtom)
 	const nbCells = useAtomValue(atoms.nbCellsAtom)
 	return (
 		<Card>
@@ -42,9 +43,8 @@ export const GridInfo = () => {
 							<span>Nb Cells: </span>
 							<span>{nbCells.toLocaleString("en-US")}</span>
 						</div>
-						<div className="flex items-center gap-2">
-							<span>Generation:</span>
-							<span>1</span>
+						<div>
+							<span>Generation Duration: {generationDuration} ms</span>
 						</div>
 					</div>
 				</div>

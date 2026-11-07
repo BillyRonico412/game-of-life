@@ -9,6 +9,7 @@ export const App = () => {
 	useAtom(atoms.drawGridEffect)
 	useAtom(atoms.playEffect)
 	useAtom(atoms.minimapEffect)
+	useAtom(atoms.gameOfLifeTypeEffect)
 
 	const onMouseUp = useSetAtom(atoms.onMouseUpAtom)
 	const onMouseDown = useSetAtom(atoms.onMouseDownAtom)
@@ -18,7 +19,15 @@ export const App = () => {
 	return (
 		<div className="w-screen h-screen overflow-hidden relative">
 			<canvas
-				id="game-of-life"
+				id="game-of-life-cpu"
+				className="w-full h-full"
+				onMouseDown={onMouseDown}
+				onMouseUp={onMouseUp}
+				onMouseMove={onMouseMove}
+				onWheel={onWheel}
+			></canvas>
+			<canvas
+				id="game-of-life-gpu"
 				className="w-full h-full"
 				onMouseDown={onMouseDown}
 				onMouseUp={onMouseUp}
