@@ -1,6 +1,5 @@
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
-import { BookOpenText, Dices, Pause, Play, Redo, RotateCcw } from "lucide-react"
-import { StatsDialog } from "@/components/stats/stats-dialog"
+import { Dices, Pause, Play, Redo, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { atoms } from "@/lib/jotai"
 
@@ -62,10 +61,6 @@ export const Buttons = () => {
 			>
 				<Dices />
 			</Button>
-			<Button size="icon">
-				<BookOpenText />
-			</Button>
-			<StatsDialog />
 		</div>
 	)
 }
