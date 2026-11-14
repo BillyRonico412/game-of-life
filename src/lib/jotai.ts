@@ -464,6 +464,7 @@ export const atoms = {
 	generationDurationAtom,
 	gameOfLifeTypeEffect,
 	gameOfLifeTypeAtom,
+	deviceAtom,
 }
 
 export const jotaiStore = createStore()
