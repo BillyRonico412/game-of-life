@@ -14,21 +14,19 @@ fn compute(@builtin(global_invocation_id) global_invocation_id: vec3u) {
     if x >= game_size.x || y >= game_size.y {
         return;
     }
-    let new_state = get_new_cell_state(x, y);
-    let index = xy_to_index(x, y);
-    next_grid[index] = new_state;
+    compute_new_cell_state(x, y);
 }
 
-fn get_new_cell_state(x: u32, y: u32) -> u32 {
+fn compute_new_cell_state(x: u32, y: u32) {
     let nb_neighboors_alive = get_neighboors_alive(x, y);
     let index = xy_to_index(x, y);
     let value = current_grid[index];
     if value == 0 && nb_neighboors_alive == 3 {
-        return 1;
+        next_grid[index] = 1;
     } else if value == 1 && (nb_neighboors_alive < 2 || nb_neighboors_alive > 3) {
-        return 0;
+        next_grid[index] = 0;
     } else {
-        return value;
+        next_grid[index] = value;
     }
 }
 
