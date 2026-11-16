@@ -12,7 +12,7 @@ export type Position = { x: number; y: number }
 const clamp = (value: number, min: number, max: number) =>
 	Math.min(Math.max(value, min), max)
 
-const gameDimensionAtom = atom<Dimension>({ width: 800, height: 600 })
+const gameDimensionAtom = atom<Dimension>({ width: 600, height: 600 })
 
 const generationTimeAtom = atom(200)
 
@@ -24,7 +24,7 @@ const generationDurationAtom = atom<number>(0)
 
 type GameOfLifeType = "cpu" | "gpu"
 
-const gameOfLifeTypeAtom = atom<GameOfLifeType>("gpu")
+const gameOfLifeTypeAtom = atom<GameOfLifeType>("cpu")
 
 const gameOfLifeTypeEffect = atomEffect((get) => {
 	const gameOfLifeType = get(gameOfLifeTypeAtom)
