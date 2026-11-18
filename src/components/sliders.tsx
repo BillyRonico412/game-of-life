@@ -5,13 +5,13 @@ import { Slider } from "@/components/ui/slider"
 import { atoms } from "@/lib/jotai"
 
 export const Sliders = () => {
-	const [generationTime, setGenerationTime] = useAtom(atoms.generationTimeAtom)
+	// const [generationTime, setGenerationTime] = useAtom(atoms.generationTimeAtom)
 	const [gameDimension, setGameDimension] = useAtom(atoms.gameDimensionAtom)
 	const setPlay = useSetAtom(atoms.playAtom)
 	const [gameOfLifeType, setGameOfLifeType] = useAtom(atoms.gameOfLifeTypeAtom)
 	return (
 		<Card>
-			<CardContent className="min-w-[180px] flex flex-col gap-2">
+			<CardContent className="min-w-[200px] flex flex-col gap-4">
 				<div className="flex gap-2">
 					<Button
 						className="flex-1"
@@ -28,7 +28,7 @@ export const Sliders = () => {
 						GPU
 					</Button>
 				</div>
-				<div className="flex flex-col gap-2">
+				{/* <div className="flex flex-col gap-2">
 					<div>
 						<span>Generation time: </span>
 						<span>{generationTime} ms</span>
@@ -43,7 +43,7 @@ export const Sliders = () => {
 							setGenerationTime(value)
 						}}
 					/>
-				</div>
+				</div> */}
 				<div className="flex flex-col gap-2">
 					<div>
 						<span>Game Width: </span>
@@ -51,7 +51,7 @@ export const Sliders = () => {
 					</div>
 					<Slider
 						min={100}
-						max={15_000}
+						max={10_000}
 						step={100}
 						value={gameDimension.width}
 						onValueChange={(v) => {
@@ -68,7 +68,7 @@ export const Sliders = () => {
 					</div>
 					<Slider
 						min={100}
-						max={15_000}
+						max={10_000}
 						step={100}
 						value={gameDimension.height}
 						onValueChange={(v) => {
@@ -78,6 +78,10 @@ export const Sliders = () => {
 						}}
 					/>
 				</div>
+				<div >
+						<span>Nb cells: </span>
+						<span>{(gameDimension.width * gameDimension.height).toLocaleString("fr-FR")}</span>
+					</div>
 			</CardContent>
 		</Card>
 	)

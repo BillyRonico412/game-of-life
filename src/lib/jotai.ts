@@ -12,13 +12,13 @@ export type Position = { x: number; y: number }
 const clamp = (value: number, min: number, max: number) =>
 	Math.min(Math.max(value, min), max)
 
-const gameDimensionAtom = atom<Dimension>({ width: 600, height: 600 })
+const gameDimensionAtom = atom<Dimension>({ width: 300, height: 300 })
 
-const generationTimeAtom = atom(200)
+const generationTimeAtom = atom(100)
 
 const playAtom = atom(false)
 
-const minimapWidthAtom = atom<number>(600)
+const minimapWidthAtom = atom<number>(300)
 
 const generationDurationAtom = atom<number>(0)
 

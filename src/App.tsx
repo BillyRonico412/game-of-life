@@ -1,6 +1,6 @@
 import { useAtom, useSetAtom } from "jotai"
 import { Controllers } from "@/components/controllers"
-import { GridInfo } from "@/components/grid-info"
+// import { GridInfo } from "@/components/grid-info"
 import { Minimap } from "@/components/minimap"
 import { Sliders } from "@/components/sliders"
 import { atoms } from "@/lib/jotai"
@@ -41,9 +41,9 @@ export const App = () => {
 			<div className="absolute left-1/2 bottom-4 -translate-x-1/2">
 				<Controllers />
 			</div>
-			<div className="absolute left-4 bottom-4">
+			{/* <div className="absolute left-4 bottom-4">
 				<GridInfo />
-			</div>
+			</div> */}
 			<div className="absolute right-4 bottom-4">
 				<Sliders />
 			</div>
